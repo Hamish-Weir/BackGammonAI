@@ -384,42 +384,11 @@ class BackGammonGame:
         return 0
     
     def __str__(self):
-        print("White Bar: %d",self.bar["white"])
-        print("Red Bar: %d",self.bar["red"])
-        print()
-        print("White Off: %d",self.off["white"])
-        print("Red Off: %d",self.off["red"])
-        print()
-        s = "    "
-        p = " "
-        e = "|      |"
-        d = "\\      /"
-        c = " \\    / "
-        b = "  \\  /  "
-        a = "   \\/   "
-        z = "   /\\   "
-        y = "  /  \\  "
-        x = " /    \\ "
-        w = "/      \\"
-        v = "|      |"
-
-        print(s+" 1"+s+ " 2"+s+" 3"+s+ " 4"+s+ " 5"+s+ " 6  |  7"+s+ " 8"+s+ " 9"+s+ "10"+s+ "11"+s+ "12"+s)
-        print(p+ e)
-        print(p+ e)
-        print(p+ e)
-        print(p+ e)
-        print(p+ c)
-        print(p+ b)
-        print(p+ a)
-        print()
-        print(p+ z)
-        print(p+ y)
-        print(p+ x)
-        print(p+ w)
-        print(p+ v)
-        print(p+ v)
-        print(p+ v)
-        print(p+ v)
-        print(s+"24"+s+ "23"+s+ "22"+s+ "21"+s+ "20"+s+ "19  | 18"+s+ "17"+s+ "16"+s+ "15"+s+ "14"+s+ "13"+s)
         
-        return ""
+        board_str = f"""
+            +----+----+----+----+----+----+    +----+----+----+----+----+----+
+            +----+----+----+----+----+----+    +----+----+----+----+----+----+
+            +----+----+----+----+----+----+    +----+----+----+----+----+----+
+            """
+    
+        return board_str
