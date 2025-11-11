@@ -1,6 +1,5 @@
 from game import BackGammonGame
 
-
 class Player:
 
     def get_next_move(self,game: BackGammonGame, dice: tuple[int, int]):
