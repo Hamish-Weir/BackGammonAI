@@ -115,7 +115,6 @@ class BackGammonGameState:
         # Get all possible dice orders (will de-dupe duplicates later)
         all_orders = set(permutations(dice_seq))
 
-        direction = -game_copy.player
         opponent = -game_copy.player
 
         def point_has_player_checker(temp_bd, player, p):
@@ -152,18 +151,18 @@ class BackGammonGameState:
                         return False
                 return True
 
-        def can_bear_off_from(temp_bd, player, point, die):
+        def can_bear_off_from(temp_bd, player, src, die):
             """Check if a checker at 'point' may bear off using die."""
 
-            dest = point + die * direction
+            dest = src - die * player
 
             if player == 1:
                 # dest < 0 = bearing off
                 if dest < 0:
-                    if die == point + 1:  # Exact Roll, Off
+                    if die == src + 1:  # Exact Roll, Off
                         return True
-                    if die > point + 1:  # Higher Roll, No higher Pieces, Off
-                        for i in range(point + 1, 6):
+                    if die > src + 1:  # Higher Roll, No higher Pieces, Off
+                        for i in range(src + 1, 6):
                             if temp_bd[i] > 0:
                                 return False
                         return True
@@ -172,10 +171,10 @@ class BackGammonGameState:
             else:  # red
                 # dest > 23 = bearing off
                 if dest > 23:
-                    if die == 24 - point:  # Exact Roll, Off
+                    if die == 24 - src:  # Exact Roll, Off
                         return True
-                    if die > 24 - point:  # Higher Roll, No higher Pieces, Off
-                        for i in range(point - 1, 17, -1):
+                    if die > 24 - src:  # Higher Roll, No higher Pieces, Off
+                        for i in range(src - 1, 17, -1):
                             if temp_bd[i] < 0:
                                 return False
                         return True
@@ -197,26 +196,26 @@ class BackGammonGameState:
 
             # Normal moves from points that have player's checkers
             else:
-                for i in range(0, 24):
+                for src in range(0, 24):
                     if not point_has_player_checker(
-                        temp_game.board, temp_game.player, i
+                        temp_game.board, temp_game.player, src
                     ):
                         continue  # No piece here
 
-                    dest = i + die * direction
+                    dest = src - die * temp_game.player
 
                     # Bearing off
                     if dest < 0 or dest > 23:
                         if all_checkers_in_home(temp_game.board, temp_game.player) and can_bear_off_from(
-                            temp_game.board,temp_game.player, i, die
+                            temp_game.board,temp_game.player, src, die
                         ):
-                            moves.append((i, "off", die))
+                            moves.append((src, "off", die))
                         # can't bear off with this die, from this point
                         continue
 
                     # Regular destination & move
                     if can_land_on(temp_game.board, temp_game.player, dest):
-                        moves.append((i, dest, die))
+                        moves.append((src, dest, die))
 
                 return moves
 
@@ -229,6 +228,8 @@ class BackGammonGameState:
 
             src, dest, die = move
 
+            # dest = src - die * temp_game.player #TODO
+            
             # Remove checker from source
             if src == "bar":
                 temp_game2.bar[temp_game2.player] -= 1
