@@ -2,7 +2,7 @@ from copy import copy, deepcopy
 from itertools import permutations
 
 
-class BackGammonGame:
+class BackGammonGameState:
     """
     Game of BackGammon in which we have:
         Doubling Dice
@@ -17,7 +17,7 @@ class BackGammonGame:
 
                         <--White Going | Red Going-->
         White Home        Out            out            Red Home
-        [-2,0,0,0,0,6,    0,3,0,0,0,-6,  6,0,0,0,-3,0,  -6,0,0,0,0,2]
+        [-2,0,0,0,0,5,    0,3,0,0,0,-5,  5,0,0,0,-3,0,  -5,0,0,0,0,2]
     """
 
     def __init__(
@@ -36,8 +36,7 @@ class BackGammonGame:
         else:
             #                                   <--White Going | Red Going-->
             #                  White Home        Out            out            Red Home
-            self.board = [-2, 0, 0, 0, 0, 6, 0, 3, 0, 0,
-                          0, -6, 6, 0, 0, 0, -3, 0, -6, 0, 0, 0, 0, 2,]
+            self.board = [-2,0,0,0,0,5,    0,3,0,0,0,-5,  5,0,0,0,-3,0,  -5,0,0,0,0,2]
 
         if bar:
             # Validate Bar
@@ -86,7 +85,7 @@ class BackGammonGame:
     @classmethod
     def new_default(cls):
         """init default game"""
-        return cls([-2,0,0,0,0,6,    0,3,0,0,0,-6,  6,0,0,0,-3,0,  -6,0,0,0,0,2], {1: 0, -1: 0}, {1: 0, -1: 0}, 1)
+        return cls([-2,0,0,0,0,5,    0,3,0,0,0,-5,  5,0,0,0,-3,0,  -5,0,0,0,0,2], {1: 0, -1: 0}, {1: 0, -1: 0}, 1)
 
 
     def get_valid_move_sequences(self, dice: tuple[int, int]):
@@ -130,13 +129,13 @@ class BackGammonGame:
             else:
                 return val <= 1  # 1 or less white
 
-        def enter_from_bar_dest_index(die, player):
+        def enter_from_bar_dest_index(die):
             """If moving a checker from the bar, destination index for a die."""
             # For white: entry points are adjusted
             # die roll: 1 | 2 | 3 | 4 | 5 | 6
             # entry   : 0 | 1 | 2 | 3 | 4 | 5 or 23 | 22 | 21 | 20 | 19 | 18
             # for       red                  and white                       respectively
-            return 24 - die if player == 1 else die - 1
+            return 24 - die if self.player == 1 else die - 1
 
         def all_checkers_in_home(temp_bd, player):
             """Return True if all player's checkers are in the home board (for bearing off)."""
@@ -326,8 +325,16 @@ class BackGammonGame:
         final_sequences = [list(seq) for seq in all_sequences]
 
         # Sort for deterministic output (optional)
-        final_sequences.sort(key=lambda s: (len(s), s), reverse=True)
+        def normalize_value(v):
+            return -1 if v in ("off", "bar") else v
 
+        final_sequences.sort(
+            key=lambda s: (
+                len(s),
+                [tuple(normalize_value(x) for x in move) for move in s]
+            ),
+            reverse=True)
+        
         return final_sequences
 
     def is_win(self, player):
@@ -397,10 +404,12 @@ class BackGammonGame:
             return self
 
         for move in move_seq:
-            make_move(move)
+            make_move(self, move)
 
+        self.player = -self.player
+        
     def has_legal_moves(self):
-        if self.get_valid_move_sequences():
+        if (self.get_valid_move_sequences() and not (self.game_over() == None)):
             return True
         else:
             return False
@@ -415,7 +424,7 @@ class BackGammonGame:
 
         return 0
 
-    def get_winner(self):
+    def game_over(self):
         if self.is_win(1):
             return "White"
         elif self.is_win(-1):
@@ -426,6 +435,8 @@ class BackGammonGame:
         RED = "\033[91m"
         WHITE = "\033[0m"
         YELLOW = "\033[1;33m"
+
+        BOARD_COLOUR = YELLOW
         PLAYER_COLOUR = WHITE if self.player == 1 else RED
         TO_PLAY = "White" if self.player == 1 else "Red"
         
@@ -440,21 +451,20 @@ class BackGammonGame:
                 elif n > 0:
                     list2.append(f"{WHITE}{n:4d}{WHITE}")
                 else:
-                    list2.append(f"{RED}{n:4d}{WHITE}")
+                    list2.append(f"{RED}{abs(n):4d}{WHITE}")
             return " ".join(list2)
 
-        board_str = f"""
-            {WHITE}White Home                         {WHITE}Out
-            {get_spaced_str([0, 1, 2, 3, 4, 5])}      {get_spaced_str([6, 7, 8, 9, 10, 11])}
-            +----+----+----+----+----+----+    +----+----+----+----+----+----+
-            {get_spaced_str_board(self.board[0:6])}      {get_spaced_str_board(self.board[6:12])}
-            +----+----+----+----+----+----+    +----+----+----+----+----+----+
-            {get_spaced_str_board(self.board[-1:-7:-1])}      {get_spaced_str_board(self.board[-7:-13:-1])}
-            +----+----+----+----+----+----+    +----+----+----+----+----+----+
-            {get_spaced_str([23, 22, 21, 20, 19, 18])}      {get_spaced_str([17, 16, 15, 14, 13, 12])}
-            {RED}Red Home                           {RED}Out
-            
-            {YELLOW}To Play: {PLAYER_COLOUR}{TO_PLAY}{WHITE}
-            """
+        board_str = f"""                {WHITE}White Home                         {WHITE}Out
+        {BOARD_COLOUR}OFF     {get_spaced_str([1, 2, 3, 4, 5, 6])}      {get_spaced_str([7, 8, 9, 10, 11, 12])}     BAR
+                {BOARD_COLOUR}+----+----+----+----+----+----+    +----+----+----+----+----+----+
+        {WHITE}{self.off[1]:4d}    {get_spaced_str_board(self.board[0:6])}      {get_spaced_str_board(self.board[6:12])}   {WHITE}{self.bar[1]:4d}
+                {BOARD_COLOUR}+----+----+----+----+----+----+    +----+----+----+----+----+----+
+        {RED}{self.off[-1]:4d}    {get_spaced_str_board(self.board[-1:-7:-1])}      {get_spaced_str_board(self.board[-7:-13:-1])}   {RED}{self.bar[-1]:4d}
+                {BOARD_COLOUR}+----+----+----+----+----+----+    +----+----+----+----+----+----+
+                {get_spaced_str([24, 23, 22, 21, 20, 19])}      {get_spaced_str([18, 17, 16, 15, 14, 13])}
+                {RED}Red Home                           {RED}Out
+
+            {BOARD_COLOUR}To Play: {PLAYER_COLOUR}{TO_PLAY}{WHITE}"""
 
         return board_str
+
