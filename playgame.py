@@ -29,6 +29,12 @@ class BackGammon:
         print(self.gamestate)
         print(f"         Die Rolled:{remaining_dice_str}")
 
+    def printmovesequence(self, move_sequence):
+        print(f"Move Sequence Taken: ",end='')
+        # This is an goofy generator
+        print([(("bar", die) if src == "bar" else (src+1, die)) for (src, die) in move_sequence]
+)
+
     def printwinner(self):
         # os.system('cls')
         print()
@@ -59,7 +65,7 @@ class BackGammon:
 
             if move_sequence in valid_move_sequences:
                 self.gamestate.make_move_sequence(move_sequence)
-                print(f"Move Sequence Taken: {move_sequence}")
+                self.printmovesequence(move_sequence)
             else:
                 raise ValueError("Invalid Move: Exiting")
             
@@ -71,25 +77,3 @@ seed(0)
 game = BackGammon(Agent_Random(),Agent_Random())
 game.play()
 
-
-# while(game.get_winner() is None):
-    
-#     die = (randrange(1,7),randrange(1,7))
-
-#     printturn(game,die)
-    
-#     valid_move_sequences = game.get_valid_move_sequences(die)
-#     move_sequence = current_player.get_next_move(game,die)
-
-#     if move_sequence in valid_move_sequences:
-#         game.make_move_sequence(move_sequence)
-#     else:
-#         raise ValueError("Invalid Move: Exiting")
-    
-#     current_player, other_player = other_player, current_player
-
-# printwinner(game)
-# # moves = BackGammonGame.get_valid_move_sequences(new_game, (2,1))
-
-# # for move in moves:
-# #     print(move)

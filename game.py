@@ -128,6 +128,13 @@ class BackGammonGameState:
             else:
                 return val <= 1  # 1 or less white
 
+        def get_dest(src,die,player):
+            if src == "bar":
+                return 24 - die if player == 1 else die - 1
+            
+            dest = src - die*player
+            return dest
+
         def enter_from_bar_dest_index(die):
             """If moving a checker from the bar, destination index for a die."""
             # For white: entry points are adjusted
@@ -154,7 +161,7 @@ class BackGammonGameState:
         def can_bear_off_from(temp_bd, player, src, die):
             """Check if a checker at 'point' may bear off using die."""
 
-            dest = src - die * player
+            dest = get_dest(src, die, player)
 
             if player == 1:
                 # dest < 0 = bearing off
@@ -189,9 +196,10 @@ class BackGammonGameState:
             moves = []
             # If checker on bar, only bar moves allowed
             if temp_game.bar[temp_game.player] > 0:
-                dest = enter_from_bar_dest_index(die)
+                dest = get_dest("bar",die,temp_game.player)
+
                 if 0 <= dest < 24 and can_land_on(temp_game.board, temp_game.player, dest):
-                    moves.append(("bar", dest, die))
+                    moves.append(("bar", die))
                 return moves
 
             # Normal moves from points that have player's checkers
@@ -202,20 +210,20 @@ class BackGammonGameState:
                     ):
                         continue  # No piece here
 
-                    dest = src - die * temp_game.player
+                    dest = get_dest(src, die, temp_game.player)
 
                     # Bearing off
                     if dest < 0 or dest > 23:
                         if all_checkers_in_home(temp_game.board, temp_game.player) and can_bear_off_from(
                             temp_game.board,temp_game.player, src, die
                         ):
-                            moves.append((src, "off", die))
+                            moves.append((src, die))
                         # can't bear off with this die, from this point
                         continue
 
                     # Regular destination & move
                     if can_land_on(temp_game.board, temp_game.player, dest):
-                        moves.append((src, dest, die))
+                        moves.append((src, die))
 
                 return moves
 
@@ -226,9 +234,9 @@ class BackGammonGameState:
             """
             temp_game2 = deepcopy(temp_game)
 
-            src, dest, die = move
+            src, die = move
 
-            # dest = src - die * temp_game.player #TODO
+            dest = get_dest(src, die, temp_game.player)
             
             # Remove checker from source
             if src == "bar":
@@ -241,7 +249,7 @@ class BackGammonGameState:
                     temp_game2.board[src] += 1
 
             # Place at Destination/Off
-            if dest == "off":
+            if dest < 0 or dest > 23:
                 temp_game2.off[temp_game2.player] += 1
             else:
                 # If hitting opponent, send it to bar
@@ -367,12 +375,27 @@ class BackGammonGameState:
 
         opponent = -self.player
 
+        
         def make_move(self, move):
             """
             Apply a SINGLE move to copies of (temp_bd, temp_bar, temp_off) and return them.
             move recieved as (from_index OR 'bar', to_index OR 'off', die).
             """
-            src, dest, die = move
+
+            def get_dest(src,die,player):
+                if src == "bar":
+                    return 24 - die if player == 1 else die - 1
+                
+                dest = src - die*player
+
+                if dest < 0 or dest > 23:
+                    return "off"
+            
+                return dest
+            
+            src, die = move
+
+            dest = get_dest(src, die, self.player)
 
             # Remove checker from source
             if src == "bar":
