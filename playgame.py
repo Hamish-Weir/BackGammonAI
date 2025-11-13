@@ -74,6 +74,6 @@ class BackGammon:
         self.printwinner()
 
 seed(0)
-game = BackGammon(Agent_Random(),Agent_Random())
+game = BackGammon(Agent_Player(),Agent_Random())
 game.play()
 
