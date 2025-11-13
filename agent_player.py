@@ -45,7 +45,7 @@ class Agent_Player(Agent):
                         
                         action_sequence.append(move) # Add Move to action_sequence
                         usable_dice.remove(move[1]) # Remove Die from usable_dice
-                        print(f"My Action Sequence: {action_sequence}")
+                        self.__make_partial_move(gamestate,action_sequence)
                     else:
                         continue
                 else:
@@ -81,14 +81,20 @@ class Agent_Player(Agent):
         position, die = [x.strip() for x in input_move.lower().split()]
         
         if not(position == "bar"):
-            position, die = int(position), int(die)
-            if position < 1 or position > 24:
+            position, die = int(position)-1, int(die)
+            if position < 0 or position > 23:
                 return None
         else:
             position, die = "bar", int(die)
         
-        return (position-1,die)
+        return (position,die)
         
 
-    def __make_partial_move(gamestate,partial_move):
+    def __make_partial_move(self,gamestate:BackGammonGameState,partial_move):
+        temp_gamestate = deepcopy(gamestate)
+        temp_gamestate.make_move_sequence(partial_move)
+        temp_gamestate.player = -temp_gamestate.player #This is jank but its easy
+        print("Partial Move:")
+        print(temp_gamestate)
+
         pass
