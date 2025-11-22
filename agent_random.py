@@ -1,12 +1,15 @@
 from random import randrange
+
 from abstract_agent import Agent
-from game import BackGammonGameState
+
+import backgammon_helper as bg
+
 
 class Agent_Random(Agent):
+    def get_next_move(self,gamestate, dice, player):
 
-    def get_next_move(self,game: BackGammonGameState, dice: tuple[int, int]):
-        valid_action_sequences = game.get_valid_move_sequences(dice)
-        size = len(valid_action_sequences)
-        action = randrange(0,size)
-        return valid_action_sequences[action]
-        
+        next_move_sequence, _ = bg.get_legal_move_sequences(gamestate, dice, player)
+        if next_move_sequence:
+            size = len(next_move_sequence)
+            action = randrange(0,size)
+            return next_move_sequence[action]
