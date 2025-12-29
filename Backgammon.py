@@ -72,7 +72,7 @@ if __name__ == "__main__":
         ),
         logDest=args.log,
         verbose=args.verbose,
-        timelimitOff=args.timelimitOff
+        timelimitOff=args.timelimitOff,
     )
 
     if args.verbose:

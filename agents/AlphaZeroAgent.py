@@ -64,29 +64,58 @@ class MCTSNode:
         best_child = self.children.get(BackgammonUtils._movesequence_key(best_move),None)
         return best_child, best_move
 
-    def best_move(self):
+    def best_move_with_temperature(self):
+        if not self.children:
+            return [], None
+
+        moves = self.legal_moves
+        visit_counts = np.array([self.N.get(tuple(m)) for m in moves], dtype=np.float64)
+
+        tau = 1
+        adjusted = visit_counts ** (1.0 / tau)
+        probs = adjusted / (adjusted.sum() + 1e-12)
+        choice_idx = np.random.choice(len(moves), p=probs)
+        best_move = moves[choice_idx]
+
         if self.node_type == 1:
-            first_best_move = max(
-                self.legal_moves,
-                key=lambda m: (self.N[tuple(m)], self.Q[tuple(m)])
-            )
-            best_child = self.children.get(tuple(first_best_move),None)
-            if best_child and best_child.children:
-                second_best_move = best_child.best_move()
-            elif BackgammonUtils.game_over(best_child.board):
-                second_best_move = []
+            best_child = self.children.get(tuple(best_move),None)
+            if best_child:
+                best_move2, _ = best_child.best_move_with_temperature()
+                return list(best_move) + best_move2, best_child
             else:
-                raise Exception("Too Few Simulations")
-            
-
-
-            return list(first_best_move) + list(second_best_move)
+                raise Exception
+        elif self.node_type == 0 or self.node_type == 2:
+            return list(best_move), None
         else:
-            best_move = max(
-                self.legal_moves,
-                key=lambda m: (self.N[tuple(m)], self.Q[tuple(m)])
-            )
-            return list(best_move)
+            raise Exception("Wrong node_type")
+
+    def best_move_without_temperature(self):
+        if not self.children:
+            return [], None
+
+        best_move = max(
+            self.legal_moves,
+            key=lambda m: (self.N[tuple(m)], self.Q[tuple(m)])
+        )
+
+        if self.node_type == 1:
+            best_child = self.children.get(tuple(best_move),None)
+            if best_child:
+                best_move2, _ = best_child.best_move_without_temperature()
+                return list(best_move) + best_move2, best_child
+            else:
+                raise Exception
+        elif self.node_type == 0 or self.node_type == 2:
+            return list(best_move), None
+        else:
+            raise Exception("Wrong node_type")
+
+    def best_move(self,turn,training):
+        if turn <= 15 and training:
+            return self.best_move_with_temperature()
+        else:
+            return self.best_move_without_temperature()
+            
 
 
     def __str__(self):
@@ -110,28 +139,30 @@ class AlphaZeroAgent(AgentBase):
     def __init__(
         self,
         colour: Colour,
-        simulations: int = 300,
+        simulations: int = 1000,
         dirichlet_alpha = 0.03,
         dirichlet_epsilon = 0.25,
-        model = None,
-        random_seed = None,
+        training = False,
+        model_path = None,
     ):
         super().__init__(colour)
         self.simulations = simulations
         self.dirichlet_alpha = dirichlet_alpha
         self.dirichlet_epsilon = dirichlet_epsilon
+        self.training = training
+        self.state = None
+        self.turn = 0
 
-        torch.manual_seed(0)
-        if model:
-            self.model = model # Use Loaded Model
-        else:
-            self.model = AlphaZeroNet()
-            try:
+        self.model = AlphaZeroNet()
+        
+        try:
+            if model_path:
+                self.model.load_state_dict(torch.load(model_path,weights_only=True)) # Use Loaded Model
+            else:
                 self.model.load_state_dict(torch.load("models/best_model.pth",weights_only=True))
-            except Exception:
-                # print("Model not Found")
-                # print("Model Initialized with Random Weights")
-                pass
+        except Exception:
+            print("Model not Found; Initialized with Random Weights")
+
 
     def make_move(
         self,
@@ -139,6 +170,7 @@ class AlphaZeroAgent(AgentBase):
         dice: list[int, int],
         opp_move: MoveSequence | None,
     ) -> MoveSequence:
+        self.turn += 1
         root_board = BackgammonUtils.get_internal_board(board)
         player = self._player_id()
 
@@ -162,9 +194,11 @@ class AlphaZeroAgent(AgentBase):
         #     for key, val in node.children.items():
         #         stack.append(val)
         # return None
-    
+        
         if self.root.children:
-            best_move = self.root.best_move()
+            best_move, best_child = self.root.best_move(self.turn,self.training)
+            if self.training:
+                self.save_state(best_child)
         else: 
             raise Exception("Too Few Simulations Run")
 
@@ -355,19 +389,13 @@ class AlphaZeroAgent(AgentBase):
             return node.board,self._get_node_dice(node),node.player
 
     def _evaluate_node(self, node:MCTSNode):
-        # encode board
-        if node.parent:
-            past_board, past_dice, past_player = self._get_previous_board_dice_player(node.parent)
-        else:
-            past_board = np.zeros_like(node.board)
-            past_dice = [0,0]
-            past_player =  node.player
 
-        present_board = node.board
-        present_dice = self._get_node_dice(node)
-        present_player =  node.player
+        state_board = node.board
+        state_dice = self._get_node_dice(node)
+        state_type =  node.node_type
 
-        encoded = BackgammonUtils.encode_board(present_board,present_dice,present_player,past_board,past_dice,past_player)
+
+        encoded = BackgammonUtils.encode_board(state_board,state_dice,state_type,node.player)
 
         # get value and policy
         with torch.no_grad():
@@ -379,9 +407,8 @@ class AlphaZeroAgent(AgentBase):
             pol = {}
             for move_sequence in node.legal_moves:
                 decoded_move_sequence = [BackgammonUtils.decode_move(move,node.player) for move in move_sequence]
-                idx = BackgammonUtils.get_prior_idx(decoded_move_sequence,present_dice)
-                # pol[tuple(move_sequence)] = float(policy[idx])
-                pol[tuple(move_sequence)] = 1
+                idx = BackgammonUtils.get_prior_idx(decoded_move_sequence,state_dice)
+                pol[tuple(move_sequence)] = float(policy[idx])
 
             # normalize
             s = sum(pol.values()) + 1e-12
@@ -428,3 +455,40 @@ class AlphaZeroAgent(AgentBase):
         s2 = sum(self.root.P.values()) + 1e-12
         for k in self.root.P:
             self.root.P[k] = self.root.P[k] / s2
+
+    def save_state(self, best_child):
+        if best_child:
+            dice = self.root.node_action
+            t1 = BackgammonUtils.encode_board(self.root.board,dice,self.root.node_type,self.root.player)
+            t2 = BackgammonUtils.encode_board(best_child.board,dice,best_child.node_type,self.root.player)
+
+            p1 = np.zeros(701)
+            for ms, n in self.root.N.items():
+                idx = BackgammonUtils.get_prior_idx(ms,dice)
+                p1[idx] = n
+            p1 = p1 / (np.sum(p1) + 1e-12)
+
+            p2 = np.zeros(701)
+            for ms, n in best_child.N.items():
+                idx = BackgammonUtils.get_prior_idx(ms,dice)
+                p2[idx] = n
+            p2 = p2 / (np.sum(p2) + 1e-12)
+
+            player = self.colour
+
+            self.state = [(t1,p1,player),(t2,p2,player)]
+        else:
+            dice = self.root.node_action
+            t = BackgammonUtils.encode_board(self.root.board,dice,self.root.node_type,self.root.player)
+
+            p = np.zeros(701)
+            for ms, n in self.root.N.items():
+                idx = BackgammonUtils.get_prior_idx(ms,dice)
+                p[idx] = n
+            p = p / (np.sum(p) + 1e-12)
+
+            player = self.colour
+            self.state = [(t,p,player)]
+        
+    def get_state(self):
+        return self.state

@@ -69,27 +69,11 @@ class BackgammonUtils():
         return MoveSequence(A,B,C,D)
 
     @staticmethod
-    def encode_board(present_board,present_dice,present_player,past_board,past_dice,past_player):
-        board1 = present_board.copy()
-        board2 = past_board.copy()
+    def encode_board(board,dice,type,player):
 
-        dice1 = present_dice.copy()
-        dice2 = past_dice.copy()
-
-        player1 = present_player
-        player2 = past_player
-
-        perspective_board1 = BackgammonUtils.get_perspective_board(board1,player1)
-        perspective_board2 = BackgammonUtils.get_perspective_board(board2,player2)
-
-        diceplayer1 = np.append(np.array(dice1),np.array(player1))
-        diceplayer2 = np.append(np.array(dice2),np.array(player2))
-        arr1 = np.append(perspective_board1,diceplayer1)
-        arr2 = np.append(perspective_board2,diceplayer2)
-
-        arr = np.vstack([arr1, arr2])
-
-
+        perspective_board = BackgammonUtils.get_perspective_board(board,player)
+        diceplayer = np.append(np.array(dice),np.array(type))
+        arr = np.append(perspective_board,diceplayer)
 
         return torch.tensor(arr, dtype=torch.float)
 
