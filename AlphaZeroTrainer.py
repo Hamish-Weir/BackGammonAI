@@ -64,6 +64,7 @@ EVAL_SIMS = 1000
 GAMES_PER_TRAIN = 400
 GAMES_PER_EVAL = 100
 
+CPU_COUNT = mp.cpu_count()
 
 class AlphaZeroTrainer():
 
@@ -74,7 +75,7 @@ class AlphaZeroTrainer():
         device              = "cpu",
         best_model_path     = "models/best_model.pth",
         new_model_path      = "models/new_model.pth",
-        dataset_path        = "dataset.pkl"
+        dataset_path        = "data/dataset.pkl"
     ):
         
 
@@ -90,9 +91,16 @@ class AlphaZeroTrainer():
             self.device             = torch.device(device)
         else:
             self.device             = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            if torch.cuda.is_available():
+                print("Running on GPU")
+            else:
+                print("Running on CPU")
+
+        print(f"Playing games with {CPU_COUNT} Cores")
+
         self.best_model_path        = best_model_path
         self.new_model_path         = new_model_path
-        self.best_model             = AlphaZeroNet().to(device)
+        self.best_model             = AlphaZeroNet()
         self.new_model              = AlphaZeroNet().to(device)
 
         # Load best model if exists
@@ -106,12 +114,12 @@ class AlphaZeroTrainer():
             print("Training new model from scratch", flush=True)
 
     def _play_step(self):
-        print(f"Playing Self Play Games...  {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}", flush=True)
+        print(f"Playing Self Play Games...  {datetime.now()}", flush=True)
         self.dataset.extend(generate_dataset())
         self.save_deque() # Persist games over runs
 
     def _train_step(self):
-        print(f"Training Network...         {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}", flush=True)
+        print(f"Training Network...         {datetime.now()}", flush=True)
         flat_dataset = [pos for game in self.dataset for pos in game]
 
         optimizer = SGD(
@@ -121,6 +129,7 @@ class AlphaZeroTrainer():
             weight_decay=1e-4       # for regularization
         )
 
+        self.new_model.to(self.device)
         self.new_model.train()
         
         for _ in range(self.epochs): # *Not technicaly epochs
@@ -150,7 +159,7 @@ class AlphaZeroTrainer():
         self.new_model.eval()
 
     def _evaluate_step(self):
-        print(f"Playing Evaluation Games... {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}", flush=True)
+        print(f"Playing Evaluation Games... {datetime.now()}", flush=True)
         torch.save(self.new_model.state_dict(), self.new_model_path)
         wins = evaluate_model()
 
@@ -357,7 +366,7 @@ def generate_dataset():
     ctx = mp.get_context("spawn")
 
     dataset = []
-    with ProcessPoolExecutor(max_workers=mp.cpu_count(), mp_context=ctx, initializer=worker_init) as ex:
+    with ProcessPoolExecutor(max_workers=CPU_COUNT, mp_context=ctx, initializer=worker_init) as ex:
         futures = [ex.submit(self_play_game) for _ in range(GAMES_PER_TRAIN)]
         for future in as_completed(futures):
             # If a worker raised, .result() will re-raise that exception here.
@@ -372,7 +381,7 @@ def evaluate_model():
     ctx = mp.get_context("spawn")
 
     new_wins = 0
-    with ProcessPoolExecutor(max_workers=mp.cpu_count(), mp_context=ctx, initializer=worker_init) as ex:
+    with ProcessPoolExecutor(max_workers=CPU_COUNT, mp_context=ctx, initializer=worker_init) as ex:
         futures = [ex.submit(play_best_game,i % 2) for i in range(GAMES_PER_EVAL)]
         for future in as_completed(futures):
             # If a worker raised, .result() will re-raise that exception here.
@@ -382,7 +391,7 @@ def evaluate_model():
     return new_wins
 
 if __name__ == '__main__':
-    print(f"Start Time: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")
+    print(f"Start Time: {datetime.now()}")
     print("Initializing...", flush=True)
     
     trainer = AlphaZeroTrainer()
@@ -392,3 +401,11 @@ if __name__ == '__main__':
 
 # Itterations   TrainingGames   EvaluationGames
 # 3             400             100
+# 2 updates
+# 31            100             50
+# 6 updates
+# 1             400             10
+# 0 updates
+# 8             400             100
+# 1 updates
+

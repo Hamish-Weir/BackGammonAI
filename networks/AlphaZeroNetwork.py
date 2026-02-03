@@ -36,7 +36,7 @@ class AlphaZeroNet(nn.Module):
         self,
         input_size: int = 31,
         output_size: int = 701,
-        in_channels: int = 2,
+        in_channels: int = 1,
         channels: int = 256,
         num_res_blocks: int = 10,
     ):
@@ -84,10 +84,12 @@ class AlphaZeroNet(nn.Module):
         x: tensor shape (B, 1, 11, 11) or (B, 11, 11)
         """
         # Allow single-sample input
+        if x.dim() == 1:
+            x = x.unsqueeze(0)  # (1, 31)
         if x.dim() == 2:
-            x = x.unsqueeze(0)  # (1, 2, 31)
+            x = x.unsqueeze(1)  # (B, 1, 31)
 
-        assert x.dim() == 3 and x.size(1) == 2 and x.size(2) == self.input_size, \
+        assert x.dim() == 3 and x.size(1) == 1 and x.size(2) == self.input_size, \
             f"Expected input shape (B, 2, {self.input_size}), got {tuple(x.shape)}"
 
         # initial
