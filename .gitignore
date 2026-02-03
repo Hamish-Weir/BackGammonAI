@@ -1,2 +1,3 @@
 non-git/
-dataset.pkl
+dataset.pklfailed_backgammon/data/dataset.pkl
+failed_backgammon/dataset.pkl
