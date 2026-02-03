@@ -1,3 +1,9 @@
 non-git/
 dataset.pklfailed_backgammon/data/dataset.pkl
 failed_backgammon/dataset.pkl
+failed_backgammon/data/dataset.pkl
+reduced_backgammon/__pycache__/
+reduced_backgammon/src/__pycache__/
+reduced_backgammon/agents/__pycache__/
+reduced_backgammon/networks/__pycache__/
+failed_backgammon/models/__pycache__/
