@@ -26,14 +26,13 @@ class ExpectiMiniMaxAgent(AgentBase):
     def __init__(
         self,
         colour: Colour,
-        max_depth: int = 2,
+        search_depth: int = 2,
+        # 1 -> 0.0014 sec / turn
+        # 2 -> 0.9 sec / turn
+        # 3 -> 460 sec / turn
     ):
         super().__init__(colour)
-        self.max_depth = max_depth
-
-    # =========================
-    # Public API
-    # =========================
+        self.search_depth = search_depth
 
     def make_move(
         self,
@@ -56,10 +55,11 @@ class ExpectiMiniMaxAgent(AgentBase):
             BackgammonUtils.do_next_board_total(
                 next_board, seq, player
             )
+
             value = self._chance_node(
                 next_board,
                 self._opp_player_id(),
-                depth=1,
+                depth=self.search_depth-1,
             )
 
             if value > best_value:
@@ -68,9 +68,7 @@ class ExpectiMiniMaxAgent(AgentBase):
 
         return BackgammonUtils.get_external_movesequence(best_sequence)
 
-    # =========================
-    # MCMS Core
-    # =========================
+    # ExpectiMiniMax Logic
 
     def _chance_node(
         self,
@@ -84,11 +82,11 @@ class ExpectiMiniMaxAgent(AgentBase):
             return self._evaluate(board)
 
         value = 0.0
-        dice_outcomes = self._dice_outcomes()
+        dice_outcomes = [((1,1),1/36),((1,2),2/36),((1,3),2/36),((1,4),2/36),((1,5),2/36),((1,6),2/36),((2,2),1/36),((2,3),2/36),((2,4),2/36),((2,5),2/36),((2,6),2/36),((3,3),1/36),((3,4),2/36),((3,5),2/36),((3,6),2/36),((4,4),1/36),((4,5),2/36),((4,6),2/36),((5,5),1/36),((5,6),2/36),((6,6),1/36)]
 
         prob = 1.0 / len(dice_outcomes)
 
-        for dice in dice_outcomes:
+        for dice, prob in dice_outcomes:
             value += prob * self._player_node(
                 board, player, dice, depth
             )
@@ -108,10 +106,10 @@ class ExpectiMiniMaxAgent(AgentBase):
 
         if not legal_sequences:
             return self._chance_node(
-                board, self._opp(player), depth + 1
+                board, self._opp(player), depth - 1
             )
 
-        if player == self._player_id():
+        if player == self._player_id(): # Max Node
             best = -math.inf
             for seq in legal_sequences:
                 next_board=board.copy()
@@ -121,12 +119,12 @@ class ExpectiMiniMaxAgent(AgentBase):
                 best = max(
                     best,
                     self._chance_node(
-                        next_board, self._opp(player), depth + 1
+                        next_board, self._opp(player), depth - 1
                     ),
                 )
             return best
 
-        else:
+        else: # Min Node
             worst = math.inf
             for seq in legal_sequences:
                 next_board=board.copy()
@@ -136,15 +134,13 @@ class ExpectiMiniMaxAgent(AgentBase):
                 worst = min(
                     worst,
                     self._chance_node(
-                        next_board, self._opp(player), depth + 1
+                        next_board, self._opp(player), depth - 1
                     ),
                 )
             return worst
 
-    # =========================
     # Evaluation
-    # =========================
-
+    
     def _evaluate(self, board: np.ndarray) -> float:
         """*-Minimax leaf evaluation via Monte-Carlo rollouts"""
 
@@ -154,43 +150,16 @@ class ExpectiMiniMaxAgent(AgentBase):
 
         return BackgammonUtils.heuristic_evaluation(board,self._player_id())
 
-    def _rollout(self, board: np.ndarray) -> float:
-        player = self._player_id()
-        depth = 0
-        r_board = board.copy()
-        while not BackgammonUtils.game_over(r_board) and depth < 128:
-            dice = random.choice(self._dice_outcomes())
-            legal = BackgammonUtils.get_legal_move_sequences(
-                r_board, list(dice), player
-            )
-            if legal:
-                seq = random.choice(legal)
-                BackgammonUtils.do_next_board_total(
-                    r_board, seq, player
-                )
-            player = self._opp(player)
-            depth += 1
 
-        return BackgammonUtils.heuristic_evaluation(
-            board, self._player_id()
-        )
-
-    # =========================
     # Helpers
-    # =========================
 
     def _terminal(self, board: np.ndarray, depth: int) -> bool:
         return (
-            depth >= self.max_depth
+            depth == 0             
             or BackgammonUtils.game_over(board)
         )
 
-    def _dice_outcomes(self) -> List[Tuple[int, int]]:
-        return [
-            (i, j)
-            for i in range(1, 7)
-            for j in range(1, 7)
-        ]
+
 
     def _player_id(self) -> int:
         return 1 if self.colour == Colour.RED else -1

@@ -29,7 +29,7 @@ class MCTSNode:
     value: float = 0.0
     untried_moves: Optional[List[list]] = None
 
-    def ucb_score(self, exploration: float = 1.4) -> float:
+    def ucb_score(self, exploration: float = 0.8) -> float:
         if self.visits == 0:
             return float("inf")
         return (
@@ -61,8 +61,8 @@ class MCTSAgent(AgentBase):
         self,
         colour: Colour,
         simulations: int = 5000,
-        num_rollouts: int = 0,
-        rollout_depth: int = 0,
+        # num_rollouts: int = 0,
+        # rollout_depth: int = 0,
         random_seed = None,
     ):
         super().__init__(colour)
@@ -95,6 +95,9 @@ class MCTSAgent(AgentBase):
         else: 
             raise Exception("Too Few Simulations Run")
 
+        # for v in self.root.children.values():
+        #     print(f"{v}, ",end="")
+        # print("")
         return BackgammonUtils.get_external_movesequence(best_move)
 
     # ---------------- MCTS phases ---------------- #
@@ -108,7 +111,7 @@ class MCTSAgent(AgentBase):
 
     def _expand(self, node: MCTSNode) -> MCTSNode:
         # node_type = 0: Action node
-        # node_type = 3: Chance node
+        # node_type = 1: Chance node
 
         action_made = node.untried_moves.pop()
 
@@ -181,8 +184,3 @@ class MCTSAgent(AgentBase):
 
     def _player_id(self) -> int:
         return 1 if self.colour == Colour.RED else -1
-
-    def _random_dice(self) -> list[int]:
-        d1 = self.random.randint(1, 6)
-        d2 = self.random.randint(1, 6)
-        return [d1, d2]
