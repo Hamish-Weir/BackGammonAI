@@ -256,53 +256,28 @@ class Board():
         initial_temp_board = deepcopy(self)
         moveSequencesSet = set()
 
-        if dice[0] == dice[1]: # For Doubles
-            # try using the first dice, then the second dice, then third, then fourth (i hate doing this but oh well)
-            possible_first_moves = initial_temp_board.get_legal_moves(dice[0], player)
-            if possible_first_moves:
-                for m1 in possible_first_moves:
-                    temp_board1, possible_second_moves = next_board_and_moves(initial_temp_board,m1,dice[0],player)
-                    if possible_second_moves:
-                        for m2 in possible_second_moves:
-                            temp_board2,possible_third_moves = next_board_and_moves(temp_board1,m2,dice[0],player)
-                            if possible_third_moves:
-                                for m3 in possible_third_moves:
-                                    _,possible_fourth_moves = next_board_and_moves(temp_board2,m3,dice[0],player)
-                                    if possible_fourth_moves:
-                                        for m4 in possible_fourth_moves:
-                                            moveSequencesSet.add(MoveSequence(m1,m2,m3,m4))
-                                    else:
-                                        moveSequencesSet.add(MoveSequence(m1,m2,m3))
-                            else:
-                                moveSequencesSet.add(MoveSequence(m1,m2))
-                    else:
-                        moveSequencesSet.add(MoveSequence(m1))
+        # try using the first die, then the second die
+        possible_first_moves = initial_temp_board.get_legal_moves(dice[0], player)
+        for m1 in possible_first_moves:
+            _, possible_second_moves = next_board_and_moves(initial_temp_board, m1, dice[1], player)
+            if possible_second_moves:
+                for m2 in possible_second_moves:
+                    moveSequencesSet.add(MoveSequence(m1,m2))
             else:
-                moveSequencesSet.add(MoveSequence())
-
-        else: # For Non-Doubles
-            # try using the first die, then the second die
-            possible_first_moves = initial_temp_board.get_legal_moves(dice[0], player)
-            for m1 in possible_first_moves:
-                _, possible_second_moves = next_board_and_moves(initial_temp_board, m1, dice[1], player)
-                if possible_second_moves:
-                    for m2 in possible_second_moves:
-                        moveSequencesSet.add(MoveSequence(m1,m2))
-                else:
-                    moveSequencesSet.add(MoveSequence(m1))
+                moveSequencesSet.add(MoveSequence(m1))
+            
+        # try using the second die, then the first die
+        possible_first_moves = initial_temp_board.get_legal_moves(dice[1], player)
+        for m1 in possible_first_moves:
+            _, possible_second_moves = next_board_and_moves(initial_temp_board, m1, dice[0], player)
+            if possible_second_moves:
+                for m2 in possible_second_moves:
+                    moveSequencesSet.add(MoveSequence(m1,m2))
+            else:
+                moveSequencesSet.add(MoveSequence(m1))
                 
-            # try using the second die, then the first die
-            possible_first_moves = initial_temp_board.get_legal_moves(dice[1], player)
-            for m1 in possible_first_moves:
-                _, possible_second_moves = next_board_and_moves(initial_temp_board, m1, dice[0], player)
-                if possible_second_moves:
-                    for m2 in possible_second_moves:
-                        moveSequencesSet.add(MoveSequence(m1,m2))
-                else:
-                    moveSequencesSet.add(MoveSequence(m1))
-                    
-            # if there's no moves available:
-            if len(moveSequencesSet)==0: 
-                moveSequencesSet.add(MoveSequence())
+        # if there's no moves available:
+        if len(moveSequencesSet)==0: 
+            moveSequencesSet.add(MoveSequence())
             
         return sorted(list(moveSequencesSet))
