@@ -9,7 +9,6 @@ from typing import TextIO
 from src.AgentBase import AgentBase
 from src.Board import Board
 from src.Colour import Colour
-from src.Dice import Dice
 from src.EndState import EndState
 from src.Move import Move
 from src.MoveSequence import MoveSequence
@@ -63,7 +62,6 @@ class Game:
         self._start_time = time()
 
         self._board = Board()
-        self.dice = Dice()
 
         self.current_player = Colour.RED
         self.player1 = player1
@@ -132,19 +130,16 @@ class Game:
 
         while True:
             self._turn += 1
-            dice = self.dice.roll()
 
             currentPlayer: Player = self.players[self.current_player]
             playerAgent = currentPlayer.agent
             logger.info(f"Turn {self.turn}: player {currentPlayer.name}")
             logger.info(f"Starting Board:\n{str(self.board)}")
-            logger.info(f"Dice Roll: {dice[0]}, {dice[1]}")
-            
+
             playerBoard = deepcopy(self.board)
-            playerDice = deepcopy(dice)
 
             start = time()
-            ms = playerAgent.make_move(playerBoard, playerDice, opponentMove)
+            ms = playerAgent.make_move(playerBoard, opponentMove)
             end = time()
 
 
@@ -163,7 +158,7 @@ class Game:
             
 
 
-            if self.is_valid_move_sequence(dice, ms, self.board, self.current_player):
+            if self.is_valid_move_sequence(ms, self.board, self.current_player):
                 logger.debug("Move is valid")
                 self._make_move(ms)
                 opponentMove = ms
@@ -251,7 +246,7 @@ class Game:
         )
 
     @staticmethod
-    def is_valid_move_sequence(dice:tuple[int,int], movesequence: MoveSequence, board: Board, player:Colour) -> bool:
+    def is_valid_move_sequence(movesequence: MoveSequence, board: Board, player:Colour) -> bool:
         """Checks if the move can be made by the given player at the given
         position.
         """
@@ -261,12 +256,9 @@ class Game:
         if type(movesequence) is not type(MoveSequence()):
             return False
 
-        if not movesequence.is_valid(dice,player):
+        if not movesequence.is_valid(player):
             return False
         
-        roll = deepcopy(dice)
-        if roll[0] == roll [1]:
-            roll = roll*2
 
         temp_board = deepcopy(board)
 
@@ -279,9 +271,7 @@ class Game:
             if (board._tiles[dst].colour == Colour.opposite(player) and board._tiles[dst].p_count > 1): # Cant land on Opponent stack > 1
                 return False
 
-            if die in roll:
-                roll.remove(die)
-            else:
+            if not die in range(1,7):
                 return False
             
             if player == Colour.RED:

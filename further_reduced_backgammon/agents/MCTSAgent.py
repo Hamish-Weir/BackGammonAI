@@ -21,9 +21,8 @@ from BackgammonUtils import BackgammonUtils
 class MCTSNode:
     board: np.ndarray
     player: int
-    node_type: int
     parent: Optional[MCTSNode] = None
-    node_action: Optional[list] = None
+    node_move: Optional[list] = None
     children: Dict[int, MCTSNode] = field(default_factory=dict)
     visits: int = 0
     value: float = 0.0
@@ -36,19 +35,6 @@ class MCTSNode:
             self.value / self.visits
             + exploration * math.sqrt(math.log(self.parent.visits) / self.visits)
         )
-    
-    def chance_score(self) -> float:
-        if self.visits == 0:
-            return float("inf")
-        return (
-            1/(2*self.visits) if self.node_action in [[1,1],[2,2],[3,3],[4,4],[5,5],[6,6]] else 1/self.visits # visit non-doubles twice as much
-        )
-    
-    def node_score(self):
-        if self.node_type == 0:
-            return self.chance_score()
-        else:
-            return self.ucb_score()
 
     def __str__(self):
         return f"MCTSNode(Type: {self.node_type}, children: {len(self.children.values())}, Visits: {self.visits}, Value: {self.value}, Action {self.node_action})\n"
@@ -74,15 +60,14 @@ class MCTSAgent(AgentBase):
     def make_move(
         self,
         board: Board,
-        dice: tuple[int, int],
         opp_move: MoveSequence | None,
     ) -> MoveSequence:
         root_board = BackgammonUtils.get_internal_board(board)
         player = self._player_id()
 
-        self.root = MCTSNode(board=root_board, player=player, node_type=0, node_action=dice)
+        self.root = MCTSNode(board=root_board, player=player)
 
-        self.root.untried_moves = BackgammonUtils.get_legal_move_sequences(root_board, list(dice), player)
+        self.root.untried_moves = BackgammonUtils.get_legal_move_sequences(root_board, player)
 
         for i in range(self.simulations):
             node = self._select(self.root)
@@ -106,54 +91,31 @@ class MCTSAgent(AgentBase):
         while not BackgammonUtils.game_over(node.board):
             if node.untried_moves:
                 return self._expand(node)
-            node = max(node.children.values(), key=lambda c: c.node_score())
+            node = max(node.children.values(), key=lambda c: c.ucb_score())
         return node
 
     def _expand(self, node: MCTSNode) -> MCTSNode:
         # node_type = 0: Action node
         # node_type = 1: Chance node
 
-        action_made = node.untried_moves.pop()
+        move_made = node.untried_moves.pop()
 
-        if node.node_type == 0:     
-            # Action node -> Child Chance
-            # self  node_action => Dice
-            # Child node_action => Move Sequence
-            #       action_made => Move Sequence
+        next_board = node.board.copy()
 
-            next_board = node.board.copy()
+        BackgammonUtils.do_next_board_total(
+        next_board , move_made, node.player
+        )
 
-            BackgammonUtils.do_next_board_total(
-            next_board , action_made, node.player
-            )
+        child = MCTSNode(
+            board           = next_board,
+            player          = node.player,
+            parent          = node,
+            node_move       = move_made,
+        )
 
-            child = MCTSNode(
-                board           = next_board,
-                player          = node.player,
-                parent          = node,
-                node_action     = action_made,
-                node_type       = 1
-            )
-
-            child.untried_moves = [[1,1],[1,2],[1,3],[1,4],[1,5],[1,6],[2,2],[2,3],[2,4],[2,5],[2,6],[3,3],[3,4],[3,5],[3,6],[4,4],[4,5],[4,6],[5,5],[5,6],[6,6]]
-            
-        elif node.node_type == 1:   
-            # Chance node  -> child Action
-            # self  node_action => Move Sequence
-            # Child node_action => Dice
-            #       action_made => Dice
-            
-            child = MCTSNode(
-                board           = node.board, # no move made, so children can share board object
-                player          =-node.player, # swap player on exiting chance node
-                parent          = node,
-                node_action     = action_made,
-                node_type       = 0
-            )
-
-            child.untried_moves = BackgammonUtils.get_legal_move_sequences(
-                    node.board, action_made, child.player
-                )
+        child.untried_moves = BackgammonUtils.get_legal_move_sequences(
+            node.board, child.player
+        )   
 
         node.children[id(child)] = child
         return child
@@ -167,17 +129,10 @@ class MCTSAgent(AgentBase):
     
     def _backpropagate(self, node: MCTSNode, value: float):
         while node:
-            if node.node_type == 0: # Action node -> parent Chance
-                node.visits += 1
-                node.value += value
-                value = -value
-                node = node.parent
-
-            elif node.node_type == 1: # Chance node -> parent Action
-                node.visits += 1
-                node.value += value
-                value = value
-                node = node.parent
+            node.visits += 1
+            node.value += value
+            value = -value
+            node = node.parent
 
 
     # ---------------- Helpers ---------------- #

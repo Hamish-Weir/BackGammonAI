@@ -244,7 +244,7 @@ class Board():
                 
         return list(moveSet)
 
-    def get_legal_move_sequences(self,dice: tuple[int,int], player:Colour):
+    def get_legal_move_sequences(self, player:Colour):
 
         def next_board_and_moves(board:Board,move:Move,die:int,player:Colour):
             temp_board = deepcopy(board)
@@ -256,26 +256,29 @@ class Board():
         initial_temp_board = deepcopy(self)
         moveSequencesSet = set()
 
-        # try using the first die, then the second die
-        possible_first_moves = initial_temp_board.get_legal_moves(dice[0], player)
-        for m1 in possible_first_moves:
-            _, possible_second_moves = next_board_and_moves(initial_temp_board, m1, dice[1], player)
-            if possible_second_moves:
-                for m2 in possible_second_moves:
-                    moveSequencesSet.add(MoveSequence(m1,m2))
-            else:
-                moveSequencesSet.add(MoveSequence(m1))
-            
-        # try using the second die, then the first die
-        possible_first_moves = initial_temp_board.get_legal_moves(dice[1], player)
-        for m1 in possible_first_moves:
-            _, possible_second_moves = next_board_and_moves(initial_temp_board, m1, dice[0], player)
-            if possible_second_moves:
-                for m2 in possible_second_moves:
-                    moveSequencesSet.add(MoveSequence(m1,m2))
-            else:
-                moveSequencesSet.add(MoveSequence(m1))
-                
+        for d1 in range(1,7):
+            for d2 in range(d1,7):
+                dice = [d1,d2]
+                # try using the first die, then the second die
+                possible_first_moves = initial_temp_board.get_legal_moves(dice[0], player)
+                for m1 in possible_first_moves:
+                    _, possible_second_moves = next_board_and_moves(initial_temp_board, m1, dice[1], player)
+                    if possible_second_moves:
+                        for m2 in possible_second_moves:
+                            moveSequencesSet.add(MoveSequence(m1,m2))
+                    else:
+                        moveSequencesSet.add(MoveSequence(m1))
+                    
+                # try using the second die, then the first die
+                possible_first_moves = initial_temp_board.get_legal_moves(dice[1], player)
+                for m1 in possible_first_moves:
+                    _, possible_second_moves = next_board_and_moves(initial_temp_board, m1, dice[0], player)
+                    if possible_second_moves:
+                        for m2 in possible_second_moves:
+                            moveSequencesSet.add(MoveSequence(m1,m2))
+                    else:
+                        moveSequencesSet.add(MoveSequence(m1))
+                        
         # if there's no moves available:
         if len(moveSequencesSet)==0: 
             moveSequencesSet.add(MoveSequence())

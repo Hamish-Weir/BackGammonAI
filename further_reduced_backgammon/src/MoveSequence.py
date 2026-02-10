@@ -3,11 +3,9 @@ from dataclasses import dataclass
 
 from src.Colour import Colour
 from src.Move import Move
-from src.Dice import Dice
 
 # from Colour import Colour
 # from Move import Move
-# from Dice import Dice
 
 P1BAR = 24
 P2BAR = 25
@@ -37,12 +35,9 @@ class MoveSequence:
 
         
 
-    def is_valid(self, dice: tuple[int,int], player:Colour):
+    def is_valid(self, player:Colour):
         moves = [self._first_move,self._second_move]
         
-        roll = deepcopy(dice)
-        if roll[0] == roll[1]:
-            roll = roll*2
 
         # Check that moves are sequential format
         seen_none = False
@@ -55,10 +50,6 @@ class MoveSequence:
                 if not move.is_valid(player): # Check move is valid format
                     return False
                 
-                if move.die in roll: # Check we have the correct Dice for this MoveSequence
-                    roll.remove(move.die)
-                else:
-                    return False
             
         return True
             
@@ -108,7 +99,5 @@ class MoveSequence:
 
 if __name__ == "__main__":
     ms = MoveSequence(Move(),Move())
-    dice = Dice()
-    dice.roll()
 
-    print(ms.is_valid(dice,Colour.RED))
+    print(ms.is_valid(Colour.RED))

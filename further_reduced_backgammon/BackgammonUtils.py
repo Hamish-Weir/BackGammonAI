@@ -8,45 +8,14 @@ from src.Colour import Colour
 
 class BackgammonUtils():
     @staticmethod
-    def get_prior_idx(move_sequence, dice):
+    def get_prior_idx(move_sequence):
     
         #   0 - 324; Move, Move; Regular dice order
         # 325 - 349; Move, Skip; Regular dice order
         # 350 - 674; Move, Move; Inverse dice order
         # 675 - 699; Move, Skip; Inverse dice order
         # 700;       Skip        
-
-        if not move_sequence:
-            return 700
-
-        l = len(move_sequence)
-
-        if l == 1:
-            S,_,_ = move_sequence[0]
-
-            if S == Board.P1BAR:
-                S = 24
-
-            if move_sequence[0][2] != dice[0]:
-                idx = 675 + S
-            else:
-                idx = 325 + S
-            
-        else:
-            S1,_,_ = move_sequence[0]
-            S2,_,_ = move_sequence[1]
-
-            if S1 == Board.P1BAR:
-                S1 = 24
-            if S2 == Board.P1BAR:
-                S2 = 24
-
-            if move_sequence[0][2] != dice[0]:
-                idx = 350 + (S1 * (S1 + 1) // 2) + S2
-            else:
-                idx = 0 + (S1 * (S1 + 1) // 2) + S2
-
-        return idx
+        pass
 
     @staticmethod
     def get_internal_board(board:Board):
@@ -66,13 +35,8 @@ class BackgammonUtils():
         return MoveSequence(A,B)
 
     @staticmethod
-    def encode_board(board,dice,type,player):
-
-        perspective_board = BackgammonUtils.get_perspective_board(board,player)
-        diceplayer = np.append(np.array(dice),np.array(type))
-        arr = np.append(perspective_board,diceplayer)
-
-        return torch.tensor(arr, dtype=torch.float)
+    def encode_board(board,type,player):
+        pass
 
     @staticmethod
     def decode_move(move, player):
@@ -192,7 +156,7 @@ class BackgammonUtils():
         return list(moveSet)
 
     @staticmethod
-    def get_legal_move_sequences(board,dice:list[int,int], player:int):
+    def get_legal_move_sequences(board, player:int):
         """
         Returns:
             List[np.ndarray[np.ndarray[np.int8]]],
@@ -215,39 +179,41 @@ class BackgammonUtils():
 
         moveSequenceSet = set()
         moveSequenceList = []
-        dice.sort()
 
-        # try using the first dice, then the second dice
-        possible_first_moves = BackgammonUtils.get_legal_moves(board, dice[0], player)
-        for m1 in possible_first_moves:
-            temp_board1 = get_next_board(board,m1,player)
-            possible_second_moves = BackgammonUtils.get_legal_moves(temp_board1,dice[1], player)
-            if possible_second_moves:
-                for m2 in possible_second_moves:
-                    # temp_board2 = get_next_board(temp_board1,m2,player)
-                    if not (m1,m2) in moveSequenceSet:
-                        moveSequenceSet.add((m1,m2))
-                        moveSequenceList.append([m1,m2])
-            else: 
-                if not (m1) in moveSequenceSet:
-                    moveSequenceSet.add((m1))
-                    moveSequenceList.append([m1])
-            
-        # try using the second dice, then the first one
-        possible_first_moves = BackgammonUtils.get_legal_moves(board, dice[1], player)
-        for m1 in possible_first_moves:
-            temp_board1 = get_next_board(board,m1,player)
-            possible_second_moves = BackgammonUtils.get_legal_moves(temp_board1,dice[0], player)
-            if possible_second_moves:
-                for m2 in possible_second_moves:
-                    # temp_board2 = get_next_board(temp_board1,m2,player)
-                    if not (m1,m2) in moveSequenceSet:
-                        moveSequenceSet.add((m1,m2))
-                        moveSequenceList.append([m1,m2])
-            else: 
-                if not (m1) in moveSequenceSet:
-                    moveSequenceSet.add((m1))
-                    moveSequenceList.append([m1])
+        for d1 in range(1,7):
+            for d2 in range(d1,7):
+                dice = [d1,d2]
+                # try using the first dice, then the second dice
+                possible_first_moves = BackgammonUtils.get_legal_moves(board, dice[0], player)
+                for m1 in possible_first_moves:
+                    temp_board1 = get_next_board(board,m1,player)
+                    possible_second_moves = BackgammonUtils.get_legal_moves(temp_board1,dice[1], player)
+                    if possible_second_moves:
+                        for m2 in possible_second_moves:
+                            # temp_board2 = get_next_board(temp_board1,m2,player)
+                            if not (m1,m2) in moveSequenceSet:
+                                moveSequenceSet.add((m1,m2))
+                                moveSequenceList.append([m1,m2])
+                    else: 
+                        if not (m1) in moveSequenceSet:
+                            moveSequenceSet.add((m1))
+                            moveSequenceList.append([m1])
+                    
+                # try using the second dice, then the first one
+                possible_first_moves = BackgammonUtils.get_legal_moves(board, dice[1], player)
+                for m1 in possible_first_moves:
+                    temp_board1 = get_next_board(board,m1,player)
+                    possible_second_moves = BackgammonUtils.get_legal_moves(temp_board1,dice[0], player)
+                    if possible_second_moves:
+                        for m2 in possible_second_moves:
+                            # temp_board2 = get_next_board(temp_board1,m2,player)
+                            if not (m1,m2) in moveSequenceSet:
+                                moveSequenceSet.add((m1,m2))
+                                moveSequenceList.append([m1,m2])
+                    else: 
+                        if not (m1) in moveSequenceSet:
+                            moveSequenceSet.add((m1))
+                            moveSequenceList.append([m1])
 
         if len(moveSequenceSet) == 0:
             if not () in moveSequenceSet:

@@ -1,4 +1,4 @@
-from random import choice
+from random import choice, randint
 from BackgammonUtils import BackgammonUtils
 from src.AgentBase import AgentBase
 from src.Board import Board
@@ -13,26 +13,20 @@ class RandomAgent(AgentBase):
         super().__init__(colour)
 
 
-    def make_move(self, board: Board, dice:tuple[int,int], opp_move: Move | None) -> Move:
+    def make_move(self, board: Board, opp_move: Move | None) -> Move:
         """Makes a move based on the current board state."""
 
         internal_board = BackgammonUtils.get_internal_board(board)
 
         player = 1 if self.colour == Colour.RED else -1
 
-        if dice[0] == dice[1]:
-            dice = dice*2
-
         movesequence = []
-        while dice:
-            die = choice(dice)
-            dice.remove(die)
-
-            legal_moves = BackgammonUtils.get_legal_moves(internal_board,die,player)
+        for i in range(2):
+            legal_moves = BackgammonUtils.get_legal_moves(internal_board,randint(1,6),player)
             if legal_moves:
                 move = choice(legal_moves)
             else:
-                continue
+                break
 
             movesequence.append(move)
             BackgammonUtils.do_next_board_partial(internal_board,move,player)

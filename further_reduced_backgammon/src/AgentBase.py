@@ -13,7 +13,7 @@ class AgentBase(ABC):
         self._colour = colour
 
     @abstractmethod
-    def make_move(self, board: Board, dice:tuple[int,int], opp_move: MoveSequence | None) -> Move:
+    def make_move(self, board: Board, opp_move: MoveSequence | None) -> Move:
         """Makes a move based on the current board state."""
         pass
 
