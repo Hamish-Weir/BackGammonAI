@@ -14,9 +14,6 @@ from src.Colour import Colour
 from src.Move import Move
 from BackgammonUtils import BackgammonUtils
 
-# node_type = 0: Action node
-# node_type = 1: Chance node
-
 @dataclass
 class MCTSNode:
     board: np.ndarray
@@ -37,7 +34,7 @@ class MCTSNode:
         )
 
     def __str__(self):
-        return f"MCTSNode(Type: {self.node_type}, children: {len(self.children.values())}, Visits: {self.visits}, Value: {self.value}, Action {self.node_action})\n"
+        return f"MCTSNode(children: {len(self.children.values())}, Visits: {self.visits}, Value: {self.value}, Action {self.node_move})\n"
 
     def __repr__(self) -> str:
         return str(self)
@@ -46,7 +43,7 @@ class MCTSAgent(AgentBase):
     def __init__(
         self,
         colour: Colour,
-        simulations: int = 5000,
+        simulations: int = 1000,
         # num_rollouts: int = 0,
         # rollout_depth: int = 0,
         random_seed = None,
@@ -76,7 +73,7 @@ class MCTSAgent(AgentBase):
 
         if self.root.children:
             best_child = max(self.root.children.values(), key=lambda c: (c.visits, c.value))
-            best_move = best_child.node_action
+            best_move = best_child.node_move
         else: 
             raise Exception("Too Few Simulations Run")
 
@@ -95,8 +92,6 @@ class MCTSAgent(AgentBase):
         return node
 
     def _expand(self, node: MCTSNode) -> MCTSNode:
-        # node_type = 0: Action node
-        # node_type = 1: Chance node
 
         move_made = node.untried_moves.pop()
 
