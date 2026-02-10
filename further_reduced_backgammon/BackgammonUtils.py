@@ -73,7 +73,7 @@ class BackgammonUtils():
         return tuple(move_sequence)
 
     @staticmethod
-    def get_legal_moves(board, player):
+    def get_legal_moves(board, die, player):
         """
         Returns:
             List[MoveSequence[Move]]
@@ -86,67 +86,66 @@ class BackgammonUtils():
         if bool(board[Board.P1OFF]==15 or board[Board.P2OFF]==-15):
             return moveSet
 
-        for die in range(1,7):
-            if player == -1:
-                if board[Board.P2BAR] < 0: # Piece on Bar
-                    end_pip = 24-die
-                    if board[end_pip] < 2:
-                        moveSet.add((int(Board.P2BAR),int(end_pip),int(die))) 
-                else: # No Piece on Bar & game not over
-                    if sum(board[6:24] < 0) == 0: # Bearing off is legal
-                        start_pip = die - 1
-                        if (board[start_pip] < 0): # Exact Throw; move off
+        if player == -1:
+            if board[Board.P2BAR] < 0: # Piece on Bar
+                end_pip = 24-die
+                if board[end_pip] < 2:
+                    moveSet.add((int(Board.P2BAR),int(end_pip),int(die))) 
+            else: # No Piece on Bar & game not over
+                if sum(board[6:24] < 0) == 0: # Bearing off is legal
+                    start_pip = die - 1
+                    if (board[start_pip] < 0): # Exact Throw; move off
+                        moveSet.add((int(start_pip),int(Board.P2OFF),int(die)))
+
+                    else: # No Exact Throw, Bear off furthest if possible
+                        start_pip = np.max(np.where(board[0:7]<0)[0]) # Get Furthest Piece
+                        if start_pip < die: # If Can Move Off; move off
                             moveSet.add((int(start_pip),int(Board.P2OFF),int(die)))
+                
+                # all other legal options
+                possible_start_pips = np.where(board[0:24]<0)[0]
+                
+                start_pips = possible_start_pips
+                end_pips = start_pips - die
 
-                        else: # No Exact Throw, Bear off furthest if possible
-                            start_pip = np.max(np.where(board[0:7]<0)[0]) # Get Furthest Piece
-                            if start_pip < die: # If Can Move Off; move off
-                                moveSet.add((int(start_pip),int(Board.P2OFF),int(die)))
-                    
-                    # all other legal options
-                    possible_start_pips = np.where(board[0:24]<0)[0]
-                    
-                    start_pips = possible_start_pips
-                    end_pips = start_pips - die
+                mask = (end_pips >= 0) & (end_pips < 24) & ((board[end_pips.clip(0,23)]) < 2)
 
-                    mask = (end_pips >= 0) & (end_pips < 24) & ((board[end_pips.clip(0,23)]) < 2)
+                masked_start_pips = start_pips[mask]
+                masked_end_pips = end_pips[mask]
 
-                    masked_start_pips = start_pips[mask]
-                    masked_end_pips = end_pips[mask]
+                new_moves = [(int(start_pip),int(end_pip),int(die)) for start_pip, end_pip in zip(masked_start_pips,masked_end_pips)]
+                moveSet.update(new_moves)
 
-                    new_moves = [(int(start_pip),int(end_pip),int(die)) for start_pip, end_pip in zip(masked_start_pips,masked_end_pips)]
-                    moveSet.update(new_moves)
+        elif player == 1:
+            if board[Board.P1BAR] > 0: # Piece on Bar
+                end_pip = die-1
+                if board[end_pip] > -2:
+                    moveSet.add((int(Board.P1BAR),int(end_pip),int(die))) 
+            else: # No Piece on Bar & game not over
+                if sum(board[0:18] > 0) == 0: # Bearing off is legal
+                    start_pip = 24 - die
+                    if (board[start_pip] > 0): # Exact Throw; move off
+                        moveSet.add((int(start_pip),int(Board.P1OFF),int(die)))
 
-            elif player == 1:
-                if board[Board.P1BAR] > 0: # Piece on Bar
-                    end_pip = die-1
-                    if board[end_pip] > -2:
-                        moveSet.add((int(Board.P1BAR),int(end_pip),int(die))) 
-                else: # No Piece on Bar & game not over
-                    if sum(board[0:18] > 0) == 0: # Bearing off is legal
-                        start_pip = 24 - die
-                        if (board[start_pip] > 0): # Exact Throw; move off
+                    else: # No Exact Throw, Bear off furthest if possible
+                        start_pip = 23 - np.max(np.where(board[23:17:-1]>0)[0]) # Get Furthest Piece idx
+                        if start_pip > 24-die: # If Can Move Off; move off
                             moveSet.add((int(start_pip),int(Board.P1OFF),int(die)))
+                
+                # all other legal options
+                possible_start_pips = np.where(board[0:24]>0)[0]
+                
+                start_pips = possible_start_pips
+                end_pips = start_pips + die
 
-                        else: # No Exact Throw, Bear off furthest if possible
-                            start_pip = 23 - np.max(np.where(board[23:17:-1]>0)[0]) # Get Furthest Piece idx
-                            if start_pip > 24-die: # If Can Move Off; move off
-                                moveSet.add((int(start_pip),int(Board.P1OFF),int(die)))
-                    
-                    # all other legal options
-                    possible_start_pips = np.where(board[0:24]>0)[0]
-                    
-                    start_pips = possible_start_pips
-                    end_pips = start_pips + die
+                mask = (end_pips >= 0) & (end_pips < 24) & ((board[end_pips.clip(0,23)]) > -2)
 
-                    mask = (end_pips >= 0) & (end_pips < 24) & ((board[end_pips.clip(0,23)]) > -2)
+                masked_start_pips = start_pips[mask]
+                masked_end_pips = end_pips[mask]
 
-                    masked_start_pips = start_pips[mask]
-                    masked_end_pips = end_pips[mask]
-
-                    new_moves = [(int(start_pip),int(end_pip),int(die)) for start_pip, end_pip in zip(masked_start_pips,masked_end_pips)]
-                    moveSet.update(new_moves)
-                    
+                new_moves = [(int(start_pip),int(end_pip),int(die)) for start_pip, end_pip in zip(masked_start_pips,masked_end_pips)]
+                moveSet.update(new_moves)
+                
 
         if len(moveSet) > 1:
             move_sequences = [(s,e,d) for s,e,d in moveSet]
@@ -181,38 +180,40 @@ class BackgammonUtils():
         moveSequenceSet = set()
         moveSequenceList = []
 
-
-        # try using the first dice, then the second dice
-        possible_first_moves = BackgammonUtils.get_legal_moves(board, player)
-        for m1 in possible_first_moves:
-            temp_board1 = get_next_board(board,m1,player)
-            possible_second_moves = BackgammonUtils.get_legal_moves(temp_board1, player)
-            if possible_second_moves:
-                for m2 in possible_second_moves:
-                    # temp_board2 = get_next_board(temp_board1,m2,player)
-                    if not (m1,m2) in moveSequenceSet:
-                        moveSequenceSet.add((m1,m2))
-                        moveSequenceList.append([m1,m2])
-            else: 
-                if not (m1) in moveSequenceSet:
-                    moveSequenceSet.add((m1))
-                    moveSequenceList.append([m1])
-            
-        # try using the second dice, then the first one
-        possible_first_moves = BackgammonUtils.get_legal_moves(board, player)
-        for m1 in possible_first_moves:
-            temp_board1 = get_next_board(board,m1,player)
-            possible_second_moves = BackgammonUtils.get_legal_moves(temp_board1, player)
-            if possible_second_moves:
-                for m2 in possible_second_moves:
-                    # temp_board2 = get_next_board(temp_board1,m2,player)
-                    if not (m1,m2) in moveSequenceSet:
-                        moveSequenceSet.add((m1,m2))
-                        moveSequenceList.append([m1,m2])
-            else: 
-                if not (m1) in moveSequenceSet:
-                    moveSequenceSet.add((m1))
-                    moveSequenceList.append([m1])
+        for d1 in range(1,7):
+            for d2 in range(d1,7):
+                dice = [d1,d2]
+                # try using the first dice, then the second dice
+                possible_first_moves = BackgammonUtils.get_legal_moves(board, dice[0], player)
+                for m1 in possible_first_moves:
+                    temp_board1 = get_next_board(board,m1,player)
+                    possible_second_moves = BackgammonUtils.get_legal_moves(temp_board1,dice[1], player)
+                    if possible_second_moves:
+                        for m2 in possible_second_moves:
+                            # temp_board2 = get_next_board(temp_board1,m2,player)
+                            if not (m1,m2) in moveSequenceSet:
+                                moveSequenceSet.add((m1,m2))
+                                moveSequenceList.append([m1,m2])
+                    else: 
+                        if not (m1) in moveSequenceSet:
+                            moveSequenceSet.add((m1))
+                            moveSequenceList.append([m1])
+                    
+                # try using the second dice, then the first one
+                possible_first_moves = BackgammonUtils.get_legal_moves(board, dice[1], player)
+                for m1 in possible_first_moves:
+                    temp_board1 = get_next_board(board,m1,player)
+                    possible_second_moves = BackgammonUtils.get_legal_moves(temp_board1,dice[0], player)
+                    if possible_second_moves:
+                        for m2 in possible_second_moves:
+                            # temp_board2 = get_next_board(temp_board1,m2,player)
+                            if not (m1,m2) in moveSequenceSet:
+                                moveSequenceSet.add((m1,m2))
+                                moveSequenceList.append([m1,m2])
+                    else: 
+                        if not (m1) in moveSequenceSet:
+                            moveSequenceSet.add((m1))
+                            moveSequenceList.append([m1])
 
         if len(moveSequenceSet) == 0:
             if not () in moveSequenceSet:

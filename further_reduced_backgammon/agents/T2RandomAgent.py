@@ -22,7 +22,10 @@ class RandomAgent(AgentBase):
 
         movesequence = []
         for i in range(2):
-            legal_moves = BackgammonUtils.get_legal_moves(internal_board,player)
+            legal_moves = []
+            for die in range(1,7):
+                legal_moves.extend(BackgammonUtils.get_legal_moves(internal_board,die,player))
+            
             if legal_moves:
                 move = choice(legal_moves)
             else:
